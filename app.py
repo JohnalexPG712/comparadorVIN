@@ -143,7 +143,7 @@ if st.button("3. Procesar y Comparar"):
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                 df_resultados.to_excel(writer, index=False, sheet_name="Resultados")
-                writer.save()
+    
             st.download_button(
                 label="📥 Descargar Resultados en Excel",
                 data=buffer.getvalue(),
