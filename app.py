@@ -5,7 +5,6 @@ import re
 import io
 from collections import Counter
 
-# --- Funciones Auxiliares ---
 def normalizar_vin(vin):
     return (str(vin).replace(" ", "").replace("\r", "").replace("\n", "").replace("\t", "")).upper() if vin else ""
 
@@ -34,7 +33,13 @@ def buscar_vin_flexible(vin, texto_pdf):
 def leer_excel_vins(excel_file):
     vins_validos = []
     vins_invalidos = []
-    df = pd.read_excel(excel_file, header=None, dtype=str, keep_default_na=False)
+    
+    extension = excel_file.name.split('.')[-1].lower()
+    if extension == 'xls':
+        df = pd.read_excel(excel_file, engine='xlrd', header=None, dtype=str, keep_default_na=False)
+    else:
+        df = pd.read_excel(excel_file, header=None, dtype=str, keep_default_na=False)
+    
     start_row = 0
     if len(df.columns) > 1:
         primer_posible_vin = normalizar_vin(df.iloc[0, 1])
@@ -60,7 +65,6 @@ def leer_pdf(file):
     texto_completo = re.sub(r'\s+', ' ', texto_completo).upper()
     return texto_completo
 
-# --- Interfaz Streamlit ---
 st.set_page_config(page_title="Comparador de VINs", layout="centered")
 st.title("🔍 Comparador de VINs: Excel (FMM) vs Documentos PDF")
 
@@ -137,12 +141,13 @@ if st.button("3. Procesar y Comparar"):
                 })
 
             df_resultados = pd.DataFrame(resultados)
+            df_resultados.reset_index(drop=True, inplace=True)
+            df_resultados.index = df_resultados.index + 1
             st.dataframe(df_resultados)
 
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                df_resultados.to_excel(writer, index=False, sheet_name="Resultados")
-                writer.save()
+                df_resultados.to_excel(writer, index=True, sheet_name="Resultados")
             st.download_button(
                 label="📥 Descargar Resultados en Excel",
                 data=buffer.getvalue(),
