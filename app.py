@@ -111,7 +111,7 @@ if st.button("3. Procesar y Comparar"):
 
             st.subheader("✅ Resumen de Resultados")
             st.write(f"Total de VINs válidos únicos en Excel: {len(vin_unicos_excel)}")
-            st.write(f"Total de VINs encontrados en PDFs: {len(vin_encontrados_en_pdf)}")
+            st.write(f"Total de coincidencias entre Excel y PDF: {len(vin_encontrados_en_pdf)}")
             st.write(f"Total de VINs únicos solo en PDF: {len(vin_solo_en_pdf)}")
             st.write(f"Total de VINs solo en Excel: {len(vin_solo_en_excel)}")
             st.write(f"Total de VINs repetidos en Excel: {len(vin_repetidos_excel)}")
