@@ -6,27 +6,33 @@ import io
 from collections import Counter
 
 # --------------------------------------------------------------------------
-# INICIALIZACIÓN Y LÓGICA DE REINICIO (¡NUEVA ESTRUCTURA!)
+# PATRÓN DE DISEÑO DEFINITIVO: LÓGICA DE REINICIO POR BANDERA
 # --------------------------------------------------------------------------
 
-# 1. Se define la función callback que solo "marcará" que se debe reiniciar.
-def trigger_reset():
-    st.session_state.reset_triggered = True
+# 1. Función callback que SOLO activa la bandera de reinicio.
+def solicitar_reinicio():
+    """Indica que la aplicación debe ser reiniciada en la siguiente ejecución."""
+    st.session_state.reiniciar_app = True
 
-# 2. Se inicializa el estado la primera vez que se carga la app.
-if "reset_triggered" not in st.session_state:
-    st.session_state.reset_triggered = False
-if "excel_uploader" not in st.session_state:
-    st.session_state.excel_uploader = None
-if "pdf_uploader" not in st.session_state:
-    st.session_state.pdf_uploader = []
+# 2. Inicialización del estado. Esto solo se ejecuta una vez.
+if 'reiniciar_app' not in st.session_state:
+    st.session_state.reiniciar_app = False
 
-# 3. Lógica principal de reinicio: se ejecuta al principio de cada recarga.
-#    Si la bandera de reinicio está activada, limpia el estado y la desactiva.
-if st.session_state.reset_triggered:
-    st.session_state.excel_uploader = None
-    st.session_state.pdf_uploader = []
-    st.session_state.reset_triggered = False
+# 3. Lógica principal de enrutamiento. Se ejecuta en CADA recarga de página.
+if st.session_state.reiniciar_app:
+    # MODO RESETEO: Si la bandera está activada, se limpia todo el estado.
+    
+    # Lista de todas las claves que usan los widgets.
+    keys_a_limpiar = ['excel_uploader', 'pdf_uploader']
+    for key in keys_a_limpiar:
+        if key in st.session_state:
+            del st.session_state[key]
+    
+    # Se desactiva la bandera para que la siguiente ejecución sea normal.
+    st.session_state.reiniciar_app = False
+    
+    # Se fuerza una recarga inmediata para mostrar la página limpia.
+    st.rerun()
 
 # --------------------------------------------------------------------------
 # Funciones de backend (sin cambios)
@@ -87,38 +93,32 @@ def buscar_vin_flexible(vin, texto_pdf):
     return bool(re.search(regex_pattern, texto_pdf, re.IGNORECASE))
 
 # --------------------------------------------------------------------------
-# Interfaz de la aplicación Streamlit
+# Interfaz de la aplicación Streamlit (se ejecuta solo si no se está reseteando)
 # --------------------------------------------------------------------------
 
 st.set_page_config(page_title="Comparador de VINs Adaptativo", layout="centered")
 st.title("🔬 Comparador de VINs Adaptativo: Excel vs PDF")
 st.info("Esta herramienta aprende la estructura de los VINs de tu archivo Excel para realizar una búsqueda más precisa en los PDFs.")
 
-# Widgets de carga de archivos.
 excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"], key="excel_uploader")
 pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True, key="pdf_uploader")
 
-# Botones de acción
 col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Comparar", type="primary")
 with col2:
-    # El botón ahora llama al callback que solo activa la bandera.
-    st.button("🧹 Limpiar y Empezar de Nuevo", on_click=trigger_reset)
+    # El botón ahora solo llama al callback que activa la bandera.
+    st.button("🧹 Limpiar y Empezar de Nuevo", on_click=solicitar_reinicio)
 
-# Lógica de procesamiento
 if procesar:
     if not excel_file or not pdf_files:
         st.error("Debes subir un archivo Excel y al menos un archivo PDF.")
     else:
-        with st.spinner("Procesando... Aprendiendo patrones y comparando archivos..."):
+        with st.spinner("Procesando..."):
             try:
                 # ... (El resto del código de procesamiento no cambia)
                 vins_excel_formato_base, vins_invalidos_formato = leer_excel_vins_base(excel_file)
                 prefijos_aprendidos = aprender_patrones_vin(vins_excel_formato_base)
-                
-                if not prefijos_aprendidos and vins_excel_formato_base:
-                    st.warning("No se pudo aprender ningún patrón de VINs del archivo Excel.")
                 
                 es_vin_valido = crear_validador_dinamico(prefijos_aprendidos)
                 vins_validos_finales = [vin for vin in vins_excel_formato_base if es_vin_valido(vin)]
