@@ -8,6 +8,7 @@ from collections import Counter
 # --------------------------------------------------------------------------
 # Funciones de backend (sin cambios)
 # --------------------------------------------------------------------------
+
 def normalizar_vin(vin):
     return (str(vin).replace(" ", "").replace("\r", "").replace("\n", "").replace("\t", "")).upper() if vin else ""
 
@@ -37,7 +38,7 @@ def leer_excel_vins_base(excel_file):
     
     start_row = 0
     if len(df.columns) > 1 and not df.empty:
-        if not tiene_formato_base_vin(df.iloc[0].get(1)):
+        if not tiene_formato_base_vin(df.iloc[0, 1] if len(df.iloc[0]) > 1 else ""):
             start_row = 1
         vins_crudos = df.iloc[start_row:, 1].tolist()
         for vin_crudo in vins_crudos:
@@ -65,38 +66,29 @@ def buscar_vin_flexible(vin, texto_pdf):
 # --------------------------------------------------------------------------
 # Interfaz de la aplicación Streamlit
 # --------------------------------------------------------------------------
+
 st.set_page_config(page_title="Comparador de VINs Adaptativo", layout="centered")
 st.title("🔬 Comparador de VINs Adaptativo: Excel vs PDF")
 st.info("Esta herramienta aprende la estructura de los VINs de tu archivo Excel para realizar una búsqueda más precisa en los PDFs.")
 
-# ##########################################################################
-# ## INICIO DE LA CORRECCIÓN FINAL CON REINICIO DE CONTENEDOR             ##
-# ##########################################################################
-
-# 1. Inicializar un contador en el estado de la sesión si no existe.
-if 'limpiar_contador' not in st.session_state:
-    st.session_state.limpiar_contador = 0
-
-# 2. Crear un contenedor con una clave dinámica basada en el contador.
-#    Cualquier cambio en la clave forzará a Streamlit a redibujar el contenedor y sus hijos.
-file_upload_container = st.container(key=f"uploader_{st.session_state.limpiar_contador}")
-with file_upload_container:
-    excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"])
-    pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True)
-
-# ##########################################################################
-# ## FIN DE LA CORRECCIÓN                                                 ##
-# ##########################################################################
+# Widgets de carga de archivos.
+excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"])
+pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True)
 
 col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Comparar", type="primary")
+
 with col2:
-    # 3. El botón de limpieza ahora solo incrementa el contador.
-    #    Esto cambiará la clave del contenedor y lo reiniciará.
-    if st.button("🧹 Limpiar y Empezar de Nuevo"):
-        st.session_state.limpiar_contador += 1
-        st.rerun() # Forzar una recarga inmediata de la página
+    # ##########################################################################
+    # ## INICIO DE LA CORRECCIÓN DEFINITIVA (usando st.link_button)           ##
+    # ##########################################################################
+    # Este método fuerza una recarga completa de la página, lo que garantiza
+    # que todos los widgets vuelvan a su estado inicial.
+    st.link_button("🧹 Limpiar y Empezar de Nuevo", "/", use_container_width=True)
+    # ##########################################################################
+    # ## FIN DE LA CORRECCIÓN                                                 ##
+    # ##########################################################################
 
 if procesar:
     if not excel_file or not pdf_files:
