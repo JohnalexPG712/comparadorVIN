@@ -6,7 +6,7 @@ import io
 from collections import Counter
 
 # --------------------------------------------------------------------------
-# Funciones de Procesamiento y Validación (sin cambios)
+# Funciones de backend (sin cambios)
 # --------------------------------------------------------------------------
 
 def normalizar_vin(vin):
@@ -38,7 +38,8 @@ def leer_excel_vins_base(excel_file):
     
     start_row = 0
     if len(df.columns) > 1 and not df.empty:
-        if not tiene_formato_base_vin(df.iloc[0, 1]):
+        # Usar .get(1) para evitar error si no hay columna 1
+        if not tiene_formato_base_vin(df.iloc[0].get(1)):
             start_row = 1
         vins_crudos = df.iloc[start_row:, 1].tolist()
         for vin_crudo in vins_crudos:
@@ -72,29 +73,33 @@ st.title("🔬 Comparador de VINs Adaptativo: Excel vs PDF")
 st.info("Esta herramienta aprende la estructura de los VINs de tu archivo Excel para realizar una búsqueda más precisa en los PDFs.")
 
 # ##########################################################################
-# ## INICIO DE LA CORRECCIÓN CON CALLBACK                                 ##
+# ## INICIO DE LA CORRECCIÓN FINAL (Asignando None)                       ##
 # ##########################################################################
 
-# 1. Se define la función callback que limpiará el estado de la sesión.
+# 1. Se define la función callback.
 def limpiar_archivos():
-    """Elimina las claves de los archivos subidos del estado de la sesión."""
-    for key in ["excel_uploader", "pdf_uploader"]:
-        if key in st.session_state:
-            del st.session_state[key]
+    """Asigna None a las claves de los archivos subidos en el estado de la sesión."""
+    st.session_state["excel_uploader"] = None
+    st.session_state["pdf_uploader"] = None
+    # Importante: para archivos múltiples, también hay que asignar una lista vacía
+    # Esto a veces soluciona el problema.
+    st.session_state["pdf_uploader"] = []
+
 
 # ##########################################################################
 # ## FIN DE LA CORRECCIÓN                                                 ##
 # ##########################################################################
 
+# Widgets de carga de archivos. El 'key' es fundamental.
 excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"], key="excel_uploader")
 pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True, key="pdf_uploader")
+
 
 col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Comparar", type="primary")
 with col2:
-    # 2. El botón ahora llama a la función callback con el parámetro on_click.
-    #    Streamlit se encarga de re-ejecutar el script después del callback.
+    # 2. El botón sigue llamando al callback a través de on_click.
     st.button("🧹 Limpiar y Empezar de Nuevo", on_click=limpiar_archivos)
 
 if procesar:
