@@ -13,7 +13,7 @@ def normalizar_vin(vin):
     return (str(vin).replace(" ", "").replace("\r", "").replace("\n", "").replace("\t", "")).upper() if vin else ""
 
 def tiene_formato_base_vin(vin):
-    return bool(re.fullmatch(r"[A-HJ-NPR-Z0-9]{17}", normalizar_vin(vin)))
+    return bool(re.fullmatch(r"[A-HJ-NPR-Z0--9]{17}", normalizar_vin(vin)))
 
 def aprender_patrones_vin(lista_vins_validos):
     if not lista_vins_validos:
@@ -81,17 +81,24 @@ col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Comparar", type="primary")
 with col2:
-    # MODIFICADO: Lógica corregida para el botón de limpieza.
+    # ##########################################################################
+    # ## INICIO DE LA CORRECCIÓN                                              ##
+    # ##########################################################################
     if st.button("🧹 Limpiar y Empezar de Nuevo"):
-        # Se verifica si la clave existe antes de intentar modificarla.
-        # Esto evita el error cuando se hace clic sin archivos cargados.
-        if "excel_uploader" in st.session_state:
-            st.session_state.excel_uploader = None
-        if "pdf_uploader" in st.session_state:
-            st.session_state.pdf_uploader = None
+        # Se define una lista de las 'keys' de los widgets que queremos limpiar.
+        keys_a_limpiar = ["excel_uploader", "pdf_uploader"]
         
-        # st.rerun() refresca la página para que los cambios sean visibles.
+        # Se itera sobre la lista y se elimina cada 'key' del estado de la sesión,
+        # solo si la 'key' existe actualmente. Esto previene cualquier error.
+        for key in keys_a_limpiar:
+            if key in st.session_state:
+                del st.session_state[key]
+        
+        # Se fuerza la recarga de la página para que la interfaz se actualice.
         st.rerun()
+    # ##########################################################################
+    # ## FIN DE LA CORRECCIÓN                                                 ##
+    # ##########################################################################
 
 if procesar:
     if not excel_file or not pdf_files:
@@ -99,7 +106,7 @@ if procesar:
     else:
         with st.spinner("Procesando... Aprendiendo patrones y comparando archivos..."):
             try:
-                # --- Flujo de Procesamiento (sin cambios) ---
+                # --- El resto del flujo de procesamiento no tiene cambios ---
                 vins_excel_formato_base, vins_invalidos_formato = leer_excel_vins_base(excel_file)
                 prefijos_aprendidos = aprender_patrones_vin(vins_excel_formato_base)
                 
@@ -133,7 +140,6 @@ if procesar:
                     if es_vin_valido(vin_posible) and vin_posible not in vin_unicos_excel:
                         vin_solo_en_pdf.add(vin_posible)
                 
-                # --- Presentación de Resultados (sin cambios) ---
                 st.subheader("✅ Resumen de Resultados")
                 st.write(f"Patrones de VIN aprendidos del Excel: **{', '.join(sorted(prefijos_aprendidos)) if prefijos_aprendidos else 'Ninguno'}**")
                 st.write(f"Total de VINs válidos únicos en Excel: **{len(vin_unicos_excel)}**")
