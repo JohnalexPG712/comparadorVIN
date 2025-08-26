@@ -6,31 +6,40 @@ import io
 from collections import Counter
 
 # --------------------------------------------------------------------------
-# Todas las funciones de backend se mantienen sin cambios.
+# Funciones de Procesamiento y Validación
 # --------------------------------------------------------------------------
 
 def normalizar_vin(vin):
+    """Elimina espacios y convierte a mayúsculas."""
     return (str(vin).replace(" ", "").replace("\r", "").replace("\n", "").replace("\t", "")).upper() if vin else ""
 
 def tiene_formato_base_vin(vin):
-    return bool(re.fullmatch(r"[A-HJ-NPR-Z0--9]{17}", normalizar_vin(vin)))
+    """
+    Verifica la estructura base de un VIN: 17 caracteres sin I, O, Q.
+    CORREGIDO: Se ha eliminado el guion doble en el rango '0-9'.
+    """
+    return bool(re.fullmatch(r"[A-HJ-NPR-Z0-9]{17}", normalizar_vin(vin)))
 
 def aprender_patrones_vin(lista_vins_validos):
+    """Aprende los prefijos (WMI) de una lista de VINs de referencia."""
     if not lista_vins_validos:
         return set()
     return {vin[:3] for vin in lista_vins_validos}
 
 def crear_validador_dinamico(prefijos_aprendidos):
+    """Crea y devuelve una función de validación que utiliza los prefijos aprendidos."""
     def validador(vin):
         vin_limpio = normalizar_vin(vin)
         if not tiene_formato_base_vin(vin_limpio):
             return False
+        # Si no se aprendieron patrones (ej. Excel vacío), se valida solo el formato base
         if not prefijos_aprendidos:
             return True
         return vin_limpio[:3] in prefijos_aprendidos
     return validador
 
 def leer_excel_vins_base(excel_file):
+    """Lee el Excel y realiza solo la validación de formato base."""
     vins_con_formato_correcto = []
     vins_invalidos = []
     
@@ -39,7 +48,7 @@ def leer_excel_vins_base(excel_file):
     df = pd.read_excel(excel_file, engine='xlrd' if extension == 'xls' else 'openpyxl', header=None, dtype=str, keep_default_na=False)
     
     start_row = 0
-    if len(df.columns) > 1:
+    if len(df.columns) > 1 and not df.empty:
         if not tiene_formato_base_vin(df.iloc[0, 1]):
             start_row = 1
         
@@ -81,24 +90,12 @@ col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Comparar", type="primary")
 with col2:
-    # ##########################################################################
-    # ## INICIO DE LA CORRECCIÓN                                              ##
-    # ##########################################################################
     if st.button("🧹 Limpiar y Empezar de Nuevo"):
-        # Se define una lista de las 'keys' de los widgets que queremos limpiar.
         keys_a_limpiar = ["excel_uploader", "pdf_uploader"]
-        
-        # Se itera sobre la lista y se elimina cada 'key' del estado de la sesión,
-        # solo si la 'key' existe actualmente. Esto previene cualquier error.
         for key in keys_a_limpiar:
             if key in st.session_state:
                 del st.session_state[key]
-        
-        # Se fuerza la recarga de la página para que la interfaz se actualice.
         st.rerun()
-    # ##########################################################################
-    # ## FIN DE LA CORRECCIÓN                                                 ##
-    # ##########################################################################
 
 if procesar:
     if not excel_file or not pdf_files:
@@ -106,11 +103,11 @@ if procesar:
     else:
         with st.spinner("Procesando... Aprendiendo patrones y comparando archivos..."):
             try:
-                # --- El resto del flujo de procesamiento no tiene cambios ---
+                # --- Flujo de Procesamiento ---
                 vins_excel_formato_base, vins_invalidos_formato = leer_excel_vins_base(excel_file)
                 prefijos_aprendidos = aprender_patrones_vin(vins_excel_formato_base)
                 
-                if not prefijos_aprendidos:
+                if not prefijos_aprendidos and vins_excel_formato_base:
                     st.warning("No se pudo aprender ningún patrón de VINs del archivo Excel. La búsqueda en PDF puede ser menos precisa.")
                 
                 es_vin_valido = crear_validador_dinamico(prefijos_aprendidos)
@@ -140,8 +137,11 @@ if procesar:
                     if es_vin_valido(vin_posible) and vin_posible not in vin_unicos_excel:
                         vin_solo_en_pdf.add(vin_posible)
                 
+                # --- Presentación de Resultados ---
                 st.subheader("✅ Resumen de Resultados")
-                st.write(f"Patrones de VIN aprendidos del Excel: **{', '.join(sorted(prefijos_aprendidos)) if prefijos_aprendidos else 'Ninguno'}**")
+                if prefijos_aprendidos:
+                    st.write(f"Patrones de VIN aprendidos del Excel: **{', '.join(sorted(prefijos_aprendidos))}**")
+                
                 st.write(f"Total de VINs válidos únicos en Excel: **{len(vin_unicos_excel)}**")
                 st.write(f"Total de coincidencias (Excel -> PDF): **{len(vin_encontrados_en_pdf)}**")
                 st.write(f"Total de VINs solo en Excel: **{len(vin_solo_en_excel)}**")
@@ -156,13 +156,16 @@ if procesar:
                 for item in vins_invalidos_formato:
                     resultados.append({"VIN": item['vin'], "Estado": "⚠️ Formato o Patrón Inválido", "Archivos PDF": "N/A", "Repetido en Excel": "N/A"})
 
-                df_resultados = pd.DataFrame(resultados).set_index(pd.Index(range(1, len(resultados) + 1)))
-                st.dataframe(df_resultados)
+                if resultados:
+                    df_resultados = pd.DataFrame(resultados).set_index(pd.Index(range(1, len(resultados) + 1)))
+                    st.dataframe(df_resultados)
 
-                buffer = io.BytesIO()
-                with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                    df_resultados.to_excel(writer, index=True, sheet_name="Resultados")
-                st.download_button(label="📥 Descargar Resultados en Excel", data=buffer.getvalue(), file_name="Reporte_Comparacion_VIN.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    buffer = io.BytesIO()
+                    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                        df_resultados.to_excel(writer, index=True, sheet_name="Resultados")
+                    st.download_button(label="📥 Descargar Resultados en Excel", data=buffer.getvalue(), file_name="Reporte_Comparacion_VIN.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                else:
+                    st.info("No se encontraron VINs para mostrar en los resultados.")
 
             except Exception as e:
                 st.error(f"Ocurrió un error durante el procesamiento: {e}")
