@@ -6,33 +6,18 @@ import io
 from collections import Counter
 
 # --------------------------------------------------------------------------
-# PATRÓN DE DISEÑO DEFINITIVO: LÓGICA DE REINICIO POR BANDERA
+# PATRÓN DE DISEÑO DEFINITIVO: REINICIO POR CAMBIO DE CLAVE (KEY)
 # --------------------------------------------------------------------------
 
-# 1. Función callback que SOLO activa la bandera de reinicio.
-def solicitar_reinicio():
-    """Indica que la aplicación debe ser reiniciada en la siguiente ejecución."""
-    st.session_state.reiniciar_app = True
+# 1. Se inicializa un contador en el estado de la sesión.
+#    Este contador se usará para generar claves únicas para los widgets.
+if 'upload_counter' not in st.session_state:
+    st.session_state.upload_counter = 0
 
-# 2. Inicialización del estado. Esto solo se ejecuta una vez.
-if 'reiniciar_app' not in st.session_state:
-    st.session_state.reiniciar_app = False
-
-# 3. Lógica principal de enrutamiento. Se ejecuta en CADA recarga de página.
-if st.session_state.reiniciar_app:
-    # MODO RESETEO: Si la bandera está activada, se limpia todo el estado.
-    
-    # Lista de todas las claves que usan los widgets.
-    keys_a_limpiar = ['excel_uploader', 'pdf_uploader']
-    for key in keys_a_limpiar:
-        if key in st.session_state:
-            del st.session_state[key]
-    
-    # Se desactiva la bandera para que la siguiente ejecución sea normal.
-    st.session_state.reiniciar_app = False
-    
-    # Se fuerza una recarga inmediata para mostrar la página limpia.
-    st.rerun()
+# 2. Se define la función callback que incrementará el contador.
+def reiniciar_widgets():
+    """Incrementa el contador para forzar la recreación de los widgets."""
+    st.session_state.upload_counter += 1
 
 # --------------------------------------------------------------------------
 # Funciones de backend (sin cambios)
@@ -93,22 +78,25 @@ def buscar_vin_flexible(vin, texto_pdf):
     return bool(re.search(regex_pattern, texto_pdf, re.IGNORECASE))
 
 # --------------------------------------------------------------------------
-# Interfaz de la aplicación Streamlit (se ejecuta solo si no se está reseteando)
+# Interfaz de la aplicación Streamlit
 # --------------------------------------------------------------------------
 
 st.set_page_config(page_title="Comparador de VINs Adaptativo", layout="centered")
 st.title("🔬 Comparador de VINs Adaptativo: Excel vs PDF")
 st.info("Esta herramienta aprende la estructura de los VINs de tu archivo Excel para realizar una búsqueda más precisa en los PDFs.")
 
-excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"], key="excel_uploader")
-pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True, key="pdf_uploader")
+# 3. Se usan claves dinámicas para los widgets de carga de archivos.
+#    Cuando el contador cambie, estas claves cambiarán, forzando un reinicio completo de los widgets.
+excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"], key=f"excel_uploader_{st.session_state.upload_counter}")
+pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True, key=f"pdf_uploader_{st.session_state.upload_counter}")
 
 col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Comparar", type="primary")
+
 with col2:
-    # El botón ahora solo llama al callback que activa la bandera.
-    st.button("🧹 Limpiar y Empezar de Nuevo", on_click=solicitar_reinicio)
+    # 4. El botón de limpieza ahora llama a la función que incrementa el contador.
+    st.button("🧹 Limpiar y Empezar de Nuevo", on_click=reiniciar_widgets)
 
 if procesar:
     if not excel_file or not pdf_files:
