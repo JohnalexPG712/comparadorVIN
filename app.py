@@ -71,24 +71,33 @@ st.set_page_config(page_title="Comparador de VINs Adaptativo", layout="centered"
 st.title("🔬 Comparador de VINs Adaptativo: Excel vs PDF")
 st.info("Esta herramienta aprende la estructura de los VINs de tu archivo Excel para realizar una búsqueda más precisa en los PDFs.")
 
-# Widgets de carga de archivos.
-excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"])
-pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True)
+# ##########################################################################
+# ## INICIO DE LA CORRECCIÓN DEFINITIVA (usando callback y valores correctos) ##
+# ##########################################################################
+
+# 1. Se define la función callback.
+def limpiar_sesion():
+    """Resetea los widgets de carga de archivos a su estado inicial."""
+    # El uploader de un solo archivo se resetea a None.
+    st.session_state.excel_uploader = None
+    # El uploader de múltiples archivos se resetea a una lista vacía [].
+    st.session_state.pdf_uploader = []
+
+# ##########################################################################
+# ## FIN DE LA CORRECCIÓN                                                 ##
+# ##########################################################################
+
+# Widgets de carga de archivos con sus 'keys' para controlarlos.
+excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"], key="excel_uploader")
+pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True, key="pdf_uploader")
 
 col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Comparar", type="primary")
 
 with col2:
-    # ##########################################################################
-    # ## INICIO DE LA CORRECCIÓN DEFINITIVA (usando st.link_button)           ##
-    # ##########################################################################
-    # Este método fuerza una recarga completa de la página, lo que garantiza
-    # que todos los widgets vuelvan a su estado inicial.
-    st.link_button("🧹 Limpiar y Empezar de Nuevo", "/", use_container_width=True)
-    # ##########################################################################
-    # ## FIN DE LA CORRECCIÓN                                                 ##
-    # ##########################################################################
+    # 2. El botón ahora llama a la función callback correcta, que se ejecuta en la misma página.
+    st.button("🧹 Limpiar y Empezar de Nuevo", on_click=limpiar_sesion)
 
 if procesar:
     if not excel_file or not pdf_files:
