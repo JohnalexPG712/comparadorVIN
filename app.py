@@ -6,31 +6,42 @@ import io
 from collections import Counter
 
 # --------------------------------------------------------------------------
-# Todas las funciones de procesamiento se mantienen sin cambios.
+# Lógica de Validación de VIN - ¡MODIFICADO!
 # --------------------------------------------------------------------------
 
+# NUEVO: Lista centralizada de prefijos válidos.
+# ¡Puedes añadir o quitar prefijos de este conjunto para ajustar la validación!
+PREFIJOS_VALIDOS = {"9G5", "9G6", "9G7"}
+
 def normalizar_vin(vin):
+    """Elimina espacios y convierte a mayúsculas."""
     return (str(vin).replace(" ", "").replace("\r", "").replace("\n", "").replace("\t", "")).upper() if vin else ""
 
-def validar_vin(vin):
+def es_vin_valido_con_prefijo(vin):
+    """
+    Realiza una validación completa y estricta del VIN:
+    1. Normaliza el string de entrada.
+    2. Verifica el formato estándar de 17 caracteres (sin I, O, Q).
+    3. Comprueba que comience con un prefijo de la lista PREFIJOS_VALIDOS.
+    """
     vin_limpio = normalizar_vin(vin)
-    return bool(re.fullmatch(r"[A-HJ-NPR-Z0-9]{17}", vin_limpio))
-
-def es_vin_plausible(vin):
-    if len(vin) != 17:
+    
+    # 1. Validación de formato estándar
+    if not re.fullmatch(r"[A-HJ-NPR-Z0-9]{17}", vin_limpio):
         return False
-    if len(re.findall(r"[A-Z]{6,}", vin)) > 0:
+        
+    # 2. Validación de prefijo (WMI)
+    if vin_limpio[:3] not in PREFIJOS_VALIDOS:
         return False
-    wmi = vin[:3]
-    if len(re.findall(r"[A-Z]", wmi)) < 2:
-        return False
-    serial_part = vin[6:]
-    if len(re.findall(r"[0-9]", serial_part)) < 4:
-        return False
+        
     return True
 
+# --------------------------------------------------------------------------
+# Funciones de Lectura de Archivos (modificadas para usar la nueva validación)
+# --------------------------------------------------------------------------
+
 def buscar_vin_flexible(vin, texto_pdf):
-    # Escapa el VIN para usarlo en regex y crea un patrón que ignore espacios
+    """Busca un VIN en el texto permitiendo espacios entre sus caracteres."""
     regex_pattern = r"".join(re.escape(char) + r"[\s\r\n]*" for char in vin)
     return bool(re.search(regex_pattern, texto_pdf, re.IGNORECASE))
 
@@ -38,26 +49,23 @@ def leer_excel_vins(excel_file):
     vins_validos = []
     vins_invalidos = []
     
-    # Usa un buffer para que el archivo pueda ser leído múltiples veces si es necesario
     excel_file.seek(0)
     extension = excel_file.name.split('.')[-1].lower()
-    if extension == 'xls':
-        df = pd.read_excel(excel_file, engine='xlrd', header=None, dtype=str, keep_default_na=False)
-    else:
-        df = pd.read_excel(excel_file, header=None, dtype=str, keep_default_na=False)
+    df = pd.read_excel(excel_file, engine='xlrd' if extension == 'xls' else 'openpyxl', header=None, dtype=str, keep_default_na=False)
     
     start_row = 0
     if len(df.columns) > 1:
-        # Intenta detectar si la primera fila es un encabezado
-        primer_posible_vin = normalizar_vin(df.iloc[0, 1])
-        if not validar_vin(primer_posible_vin):
+        primer_posible_vin = df.iloc[0, 1]
+        # MODIFICADO: Usa la nueva función para detectar si la primera fila es un encabezado.
+        if not es_vin_valido_con_prefijo(primer_posible_vin):
             start_row = 1
         
         vins_crudos = df.iloc[start_row:, 1].tolist()
         for vin_crudo in vins_crudos:
             vin_normalizado = normalizar_vin(vin_crudo)
             if vin_normalizado:
-                if validar_vin(vin_normalizado):
+                # MODIFICADO: Usa la nueva función para clasificar los VINs.
+                if es_vin_valido_con_prefijo(vin_normalizado):
                     vins_validos.append(vin_normalizado)
                 else:
                     vins_invalidos.append({"vin": vin_crudo, "length": len(vin_normalizado)})
@@ -65,11 +73,9 @@ def leer_excel_vins(excel_file):
 
 def leer_pdf(file):
     texto_completo = ""
-    # El archivo subido ya está en bytes, no es necesario file.read()
     file.seek(0)
     doc = fitz.open(stream=file.read(), filetype="pdf")
-    for page_num in range(doc.page_count):
-        page = doc.load_page(page_num)
+    for page in doc:
         texto_completo += page.get_text() + " "
     doc.close()
     texto_completo = re.sub(r'\s+', ' ', texto_completo).upper()
@@ -82,21 +88,15 @@ def leer_pdf(file):
 st.set_page_config(page_title="Comparador de VINs", layout="centered")
 st.title("🔍 Comparador de VINs: Excel (FMM) vs Documentos PDF")
 
-# NUEVO: Se añade un 'key' a cada file_uploader. Esto permite controlarlos
-# y borrarlos mediante programación con el nuevo botón de limpiar.
 excel_file = st.file_uploader("1. Sube el archivo Excel (FMM)", type=["xlsx", "xls"], key="excel_uploader")
 pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True, key="pdf_uploader")
 
-# NUEVO: Se usan columnas para colocar los botones uno al lado del otro.
 col1, col2 = st.columns([1.5, 2])
 
 with col1:
     procesar = st.button("3. Procesar y Comparar", type="primary")
 
 with col2:
-    # NUEVO: Este es el botón de limpiar. Al hacer clic, ejecuta st.rerun() que
-    # recarga la página, limpiando así el estado y los archivos.
-    # El simple hecho de tener el botón y la recarga es suficiente para limpiar.
     if st.button("🧹 Limpiar y Empezar de Nuevo"):
         st.rerun()
 
@@ -106,42 +106,34 @@ if procesar:
     else:
         with st.spinner("Procesando archivos y comparando VINs..."):
             try:
-                # ------ Lógica de procesamiento (sin cambios) ------
+                # --- Extracción y comparación ---
                 vins_validos, vins_invalidos = leer_excel_vins(excel_file)
-                textos_pdf = {}
-                texto_concatenado_pdf = ""
-                for pdf_file in pdf_files:
-                    texto = leer_pdf(pdf_file)
-                    textos_pdf[pdf_file.name] = texto
-                    texto_concatenado_pdf += texto
-
+                textos_pdf = {pdf.name: leer_pdf(pdf) for pdf in pdf_files}
+                texto_concatenado_pdf = " ".join(textos_pdf.values())
+                
                 vin_excel_count = Counter(vins_validos)
                 vin_unicos_excel = set(vin_excel_count.keys())
-                vin_repetidos_excel = [vin for vin, count in vin_excel_count.items() if count > 1]
+                vin_repetidos_excel = {vin for vin, count in vin_excel_count.items() if count > 1}
 
                 vin_encontrados_en_pdf = {}
                 for vin in vin_unicos_excel:
-                    archivos_donde_aparece = []
-                    for nombre_archivo, texto in textos_pdf.items():
-                        if buscar_vin_flexible(vin, texto):
-                            archivos_donde_aparece.append(nombre_archivo)
+                    archivos_donde_aparece = [name for name, texto in textos_pdf.items() if buscar_vin_flexible(vin, texto)]
                     if archivos_donde_aparece:
                         vin_encontrados_en_pdf[vin] = archivos_donde_aparece
 
                 vin_solo_en_excel = sorted(list(vin_unicos_excel - set(vin_encontrados_en_pdf.keys())))
 
-                # ------ Lógica para encontrar VINs solo en PDF (ya existía) ------
-                texto_pdf_sin_espacios = re.sub(r'\s', '', texto_concatenado_pdf)
+                # --- Búsqueda de VINs solo en PDF con la nueva validación ---
                 vin_regex = re.compile(r"[A-HJ-NPR-Z0-9]{17}")
-                posibles_vins_en_pdf_crudos = vin_regex.findall(texto_pdf_sin_espacios)
+                posibles_vins_en_pdf_crudos = vin_regex.findall(re.sub(r'\s', '', texto_concatenado_pdf))
                 
                 vin_solo_en_pdf = set()
                 for vin_posible in posibles_vins_en_pdf_crudos:
-                    # Se normaliza y valida cada VIN potencial encontrado en los PDFs
-                    if es_vin_plausible(vin_posible) and vin_posible not in vin_unicos_excel:
+                    # MODIFICADO: Usa la nueva función de validación estricta.
+                    if es_vin_valido_con_prefijo(vin_posible) and vin_posible not in vin_unicos_excel:
                         vin_solo_en_pdf.add(vin_posible)
                 
-                # ------ Presentación de resultados (sin cambios en la lógica) ------
+                # --- Presentación de resultados ---
                 st.subheader("✅ Resumen de Resultados")
                 st.write(f"Total de VINs válidos únicos en Excel: **{len(vin_unicos_excel)}**")
                 st.write(f"Total de coincidencias entre Excel y PDF: **{len(vin_encontrados_en_pdf)}**")
@@ -150,7 +142,6 @@ if procesar:
                 st.write(f"Total de VINs repetidos en Excel: **{len(vin_repetidos_excel)}**")
 
                 resultados = []
-                # 1. VINs del Excel
                 for vin in sorted(vin_unicos_excel):
                     encontrado_en = vin_encontrados_en_pdf.get(vin)
                     resultados.append({
@@ -159,29 +150,14 @@ if procesar:
                         "Archivos PDF": ", ".join(encontrado_en) if encontrado_en else "N/A",
                         "Repetido en Excel": "Sí" if vin in vin_repetidos_excel else "No"
                     })
-                # 2. VINs solo en PDF
                 for vin in sorted(vin_solo_en_pdf):
-                    resultados.append({
-                        "VIN": vin,
-                        "Estado": "📄 Solo en PDF",
-                        "Archivos PDF": "N/A", # No aplica, se encontró en el conjunto de PDFs
-                        "Repetido en Excel": "N/A"
-                    })
-                # 3. VINs inválidos del Excel
+                    resultados.append({"VIN": vin, "Estado": "📄 Solo en PDF", "Archivos PDF": "N/A", "Repetido en Excel": "N/A"})
                 for item in vins_invalidos:
-                    resultados.append({
-                        "VIN": item['vin'],
-                        "Estado": "⚠️ Formato Inválido",
-                        "Archivos PDF": "N/A",
-                        "Repetido en Excel": "N/A"
-                    })
+                    resultados.append({"VIN": item['vin'], "Estado": "⚠️ Formato Inválido", "Archivos PDF": "N/A", "Repetido en Excel": "N/A"})
 
-                df_resultados = pd.DataFrame(resultados)
-                df_resultados.reset_index(drop=True, inplace=True)
-                df_resultados.index = df_resultados.index + 1
+                df_resultados = pd.DataFrame(resultados).set_index(pd.Index(range(1, len(resultados) + 1)))
                 st.dataframe(df_resultados)
 
-                # Convertir DataFrame a Excel en memoria para descarga
                 buffer = io.BytesIO()
                 with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                     df_resultados.to_excel(writer, index=True, sheet_name="Resultados")
