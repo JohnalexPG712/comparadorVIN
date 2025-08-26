@@ -6,6 +6,18 @@ import io
 from collections import Counter
 
 # --------------------------------------------------------------------------
+# INICIALIZACIÓN DEL ESTADO DE LA SESIÓN (¡NUEVO Y CRUCIAL!)
+# --------------------------------------------------------------------------
+# Este bloque se ejecuta al principio de cada recarga de página.
+# Se asegura de que las claves para los widgets siempre existan en el estado de la sesión
+# antes de que los widgets sean dibujados.
+
+if "excel_uploader" not in st.session_state:
+    st.session_state.excel_uploader = None
+if "pdf_uploader" not in st.session_state:
+    st.session_state.pdf_uploader = []
+
+# --------------------------------------------------------------------------
 # Funciones de backend (sin cambios)
 # --------------------------------------------------------------------------
 
@@ -71,41 +83,30 @@ st.set_page_config(page_title="Comparador de VINs Adaptativo", layout="centered"
 st.title("🔬 Comparador de VINs Adaptativo: Excel vs PDF")
 st.info("Esta herramienta aprende la estructura de los VINs de tu archivo Excel para realizar una búsqueda más precisa en los PDFs.")
 
-# ##########################################################################
-# ## INICIO DE LA CORRECCIÓN DEFINITIVA (usando callback y valores correctos) ##
-# ##########################################################################
-
-# 1. Se define la función callback.
+# Función callback para el botón de limpieza
 def limpiar_sesion():
-    """Resetea los widgets de carga de archivos a su estado inicial."""
-    # El uploader de un solo archivo se resetea a None.
     st.session_state.excel_uploader = None
-    # El uploader de múltiples archivos se resetea a una lista vacía [].
     st.session_state.pdf_uploader = []
 
-# ##########################################################################
-# ## FIN DE LA CORRECCIÓN                                                 ##
-# ##########################################################################
-
-# Widgets de carga de archivos con sus 'keys' para controlarlos.
+# Widgets de carga de archivos
+# Ahora usan el estado de la sesión que hemos inicializado previamente.
 excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"], key="excel_uploader")
 pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True, key="pdf_uploader")
 
+# Botones de acción
 col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Comparar", type="primary")
-
 with col2:
-    # 2. El botón ahora llama a la función callback correcta, que se ejecuta en la misma página.
     st.button("🧹 Limpiar y Empezar de Nuevo", on_click=limpiar_sesion)
 
+# Lógica de procesamiento
 if procesar:
     if not excel_file or not pdf_files:
         st.error("Debes subir un archivo Excel y al menos un archivo PDF.")
     else:
         with st.spinner("Procesando... Aprendiendo patrones y comparando archivos..."):
             try:
-                # El resto del código de procesamiento permanece sin cambios.
                 vins_excel_formato_base, vins_invalidos_formato = leer_excel_vins_base(excel_file)
                 prefijos_aprendidos = aprender_patrones_vin(vins_excel_formato_base)
                 
@@ -113,7 +114,6 @@ if procesar:
                     st.warning("No se pudo aprender ningún patrón de VINs del archivo Excel.")
                 
                 es_vin_valido = crear_validador_dinamico(prefijos_aprendidos)
-                
                 vins_validos_finales = [vin for vin in vins_excel_formato_base if es_vin_valido(vin)]
                 vins_con_prefijo_invalido = [vin for vin in vins_excel_formato_base if not es_vin_valido(vin)]
                 for vin in vins_con_prefijo_invalido:
@@ -134,10 +134,7 @@ if procesar:
                 vin_regex = re.compile(r"[A-HJ-NPR-Z0-9]{17}")
                 posibles_vins_en_pdf_crudos = vin_regex.findall(re.sub(r'\s', '', texto_concatenado_pdf))
                 
-                vin_solo_en_pdf = set()
-                for vin_posible in posibles_vins_en_pdf_crudos:
-                    if es_vin_valido(vin_posible) and vin_posible not in vin_unicos_excel:
-                        vin_solo_en_pdf.add(vin_posible)
+                vin_solo_en_pdf = {vin for vin in posibles_vins_en_pdf_crudos if es_vin_valido(vin) and vin not in vin_unicos_excel}
                 
                 st.subheader("✅ Resumen de Resultados")
                 if prefijos_aprendidos:
@@ -149,6 +146,7 @@ if procesar:
                 st.write(f"Total de VINs encontrados solo en PDF (con patrón válido): **{len(vin_solo_en_pdf)}**")
 
                 resultados = []
+                # ... (resto del código de resultados sin cambios)
                 for vin in sorted(vin_unicos_excel):
                     encontrado_en = vin_encontrados_en_pdf.get(vin)
                     resultados.append({"VIN": vin, "Estado": "✅ Encontrado en PDF" if encontrado_en else "❌ No Encontrado", "Archivos PDF": ", ".join(encontrado_en) if encontrado_en else "N/A", "Repetido en Excel": "Sí" if vin in vin_repetidos_excel else "No"})
