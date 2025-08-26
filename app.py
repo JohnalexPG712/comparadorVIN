@@ -82,8 +82,8 @@ def buscar_vin_flexible(vin, texto_pdf):
 # --------------------------------------------------------------------------
 
 st.set_page_config(page_title="Comparador de VINs Adaptativo", layout="centered")
-st.title("🔬 Comparador de VINs Adaptativo: Excel vs PDF")
-st.info("Esta herramienta aprende la estructura de los VINs de tu archivo Excel para realizar una búsqueda más precisa en los PDFs.")
+st.title("🔬Comparador de VINs: Excel (FMM) vs Documentos PDF")
+st.info("Permite comparar y verificar los VIN entre el Formato de Movimiento de Mercancías (FMM) y los documentos soporte de las transacciones 329, 401, 422 y 436 (DI, DUTA, Factura o Remisión), detectando coincidencias incluso si los VIN están divididos por espacios o saltos de línea.")
 
 # 3. Se usan claves dinámicas para los widgets de carga de archivos.
 #    Cuando el contador cambie, estas claves cambiarán, forzando un reinicio completo de los widgets.
@@ -92,11 +92,11 @@ pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"]
 
 col1, col2 = st.columns([1.5, 2])
 with col1:
-    procesar = st.button("3. Procesar y Comparar", type="primary")
+    procesar = st.button("3. Procesar y Verificar", type="primary")
 
 with col2:
     # 4. El botón de limpieza ahora llama a la función que incrementa el contador.
-    st.button("🧹 Limpiar y Empezar de Nuevo", on_click=reiniciar_widgets)
+    st.button("🧹 Limpiar Resultados", on_click=reiniciar_widgets)
 
 if procesar:
     if not excel_file or not pdf_files:
@@ -135,9 +135,9 @@ if procesar:
                 if prefijos_aprendidos:
                     st.write(f"Patrones de VIN aprendidos del Excel: **{', '.join(sorted(prefijos_aprendidos))}**")
                 
-                st.write(f"Total de VINs válidos únicos en Excel: **{len(vin_unicos_excel)}**")
-                st.write(f"Total de coincidencias (Excel -> PDF): **{len(vin_encontrados_en_pdf)}**")
-                st.write(f"Total de VINs solo en Excel: **{len(vin_solo_en_excel)}**")
+                st.write(f"Total de VINs válidos únicos en Excel (FMM): **{len(vin_unicos_excel)}**")
+                st.write(f"Total de coincidencias (FMM -> PDF): **{len(vin_encontrados_en_pdf)}**")
+                st.write(f"Total de VINs solo en Excel (FMM): **{len(vin_solo_en_excel)}**")
                 st.write(f"Total de VINs encontrados solo en PDF (con patrón válido): **{len(vin_solo_en_pdf)}**")
 
                 resultados = []
