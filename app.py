@@ -83,7 +83,7 @@ def buscar_vin_flexible(vin, texto_pdf):
 
 st.set_page_config(page_title="Comparador de VINs Adaptativo", layout="centered")
 st.title("🔬Comparador de VINs: Excel (FMM) vs Documentos PDF")
-st.info("Permite comparar y verificar los VIN entre el Formato de Movimiento de Mercancías (FMM) y los documentos soporte de las transacciones 329, 401, 422 y 436 (DI, DUTA, Factura o Remisión), detectando coincidencias incluso si los VIN están divididos por espacios o saltos de línea.")
+st.info("Permite comparar y verificar los VIN entre el Formato de Movimiento de Mercancías (FMM) y los documentos soporte de las transacciones 329, 401, 422 y 436 (DI, DUTA, Factura o Remisión). Comparador de VINs Adaptativo.")
 
 # 3. Se usan claves dinámicas para los widgets de carga de archivos.
 #    Cuando el contador cambie, estas claves cambiarán, forzando un reinicio completo de los widgets.
@@ -138,7 +138,7 @@ if procesar:
                 st.write(f"Total de VINs válidos únicos en Excel (FMM): **{len(vin_unicos_excel)}**")
                 st.write(f"Total de coincidencias (FMM -> PDF): **{len(vin_encontrados_en_pdf)}**")
                 st.write(f"Total de VINs solo en Excel (FMM): **{len(vin_solo_en_excel)}**")
-                st.write(f"Total de VINs encontrados solo en PDF (con patrón válido): **{len(vin_solo_en_pdf)}**")
+                st.write(f"Total de VINs encontrados solo en PDF: **{len(vin_solo_en_pdf)}**")
 
                 resultados = []
                 for vin in sorted(vin_unicos_excel):
