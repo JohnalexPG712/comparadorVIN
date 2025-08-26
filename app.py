@@ -6,25 +6,21 @@ import io
 from collections import Counter
 
 # --------------------------------------------------------------------------
-# Funciones de Procesamiento y Validación (sin cambios)
+# Todas las funciones de backend se mantienen sin cambios.
 # --------------------------------------------------------------------------
 
 def normalizar_vin(vin):
-    """Elimina espacios y convierte a mayúsculas."""
     return (str(vin).replace(" ", "").replace("\r", "").replace("\n", "").replace("\t", "")).upper() if vin else ""
 
 def tiene_formato_base_vin(vin):
-    """Verifica únicamente la estructura base de un VIN: 17 caracteres sin I, O, Q."""
     return bool(re.fullmatch(r"[A-HJ-NPR-Z0-9]{17}", normalizar_vin(vin)))
 
 def aprender_patrones_vin(lista_vins_validos):
-    """Aprende los prefijos (WMI) de una lista de VINs de referencia."""
     if not lista_vins_validos:
         return set()
     return {vin[:3] for vin in lista_vins_validos}
 
 def crear_validador_dinamico(prefijos_aprendidos):
-    """Crea y devuelve una función de validación que utiliza los prefijos aprendidos."""
     def validador(vin):
         vin_limpio = normalizar_vin(vin)
         if not tiene_formato_base_vin(vin_limpio):
@@ -35,7 +31,6 @@ def crear_validador_dinamico(prefijos_aprendidos):
     return validador
 
 def leer_excel_vins_base(excel_file):
-    """Lee el Excel y realiza solo la validación de formato base."""
     vins_con_formato_correcto = []
     vins_invalidos = []
     
@@ -79,7 +74,6 @@ st.set_page_config(page_title="Comparador de VINs Adaptativo", layout="centered"
 st.title("🔬 Comparador de VINs Adaptativo: Excel vs PDF")
 st.info("Esta herramienta aprende la estructura de los VINs de tu archivo Excel para realizar una búsqueda más precisa en los PDFs.")
 
-# Asignar 'keys' es crucial para poder controlarlos programáticamente
 excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"], key="excel_uploader")
 pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True, key="pdf_uploader")
 
@@ -87,12 +81,16 @@ col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Comparar", type="primary")
 with col2:
-    # NUEVO: Lógica mejorada para el botón de limpieza
+    # MODIFICADO: Lógica corregida para el botón de limpieza.
     if st.button("🧹 Limpiar y Empezar de Nuevo"):
-        # Borra explícitamente el estado de los archivos subidos
-        st.session_state.excel_uploader = None
-        st.session_state.pdf_uploader = None
-        # Rerun para refrescar la interfaz y mostrar los widgets vacíos
+        # Se verifica si la clave existe antes de intentar modificarla.
+        # Esto evita el error cuando se hace clic sin archivos cargados.
+        if "excel_uploader" in st.session_state:
+            st.session_state.excel_uploader = None
+        if "pdf_uploader" in st.session_state:
+            st.session_state.pdf_uploader = None
+        
+        # st.rerun() refresca la página para que los cambios sean visibles.
         st.rerun()
 
 if procesar:
@@ -101,7 +99,7 @@ if procesar:
     else:
         with st.spinner("Procesando... Aprendiendo patrones y comparando archivos..."):
             try:
-                # --- Flujo de Procesamiento Adaptativo (sin cambios) ---
+                # --- Flujo de Procesamiento (sin cambios) ---
                 vins_excel_formato_base, vins_invalidos_formato = leer_excel_vins_base(excel_file)
                 prefijos_aprendidos = aprender_patrones_vin(vins_excel_formato_base)
                 
