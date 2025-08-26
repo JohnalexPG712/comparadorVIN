@@ -6,7 +6,7 @@ import io
 from collections import Counter
 
 # --------------------------------------------------------------------------
-# Funciones de Procesamiento y Validación (con nueva lógica adaptativa)
+# Funciones de Procesamiento y Validación (sin cambios)
 # --------------------------------------------------------------------------
 
 def normalizar_vin(vin):
@@ -18,34 +18,24 @@ def tiene_formato_base_vin(vin):
     return bool(re.fullmatch(r"[A-HJ-NPR-Z0-9]{17}", normalizar_vin(vin)))
 
 def aprender_patrones_vin(lista_vins_validos):
-    """
-    NUEVO: Aprende los prefijos (WMI) de una lista de VINs de referencia.
-    Extrae los primeros 3 caracteres de cada VIN y devuelve un conjunto de prefijos únicos.
-    """
+    """Aprende los prefijos (WMI) de una lista de VINs de referencia."""
     if not lista_vins_validos:
         return set()
-    prefijos = {vin[:3] for vin in lista_vins_validos}
-    return prefijos
+    return {vin[:3] for vin in lista_vins_validos}
 
 def crear_validador_dinamico(prefijos_aprendidos):
-    """
-    NUEVO: Crea y devuelve una función de validación que utiliza los prefijos aprendidos.
-    Esto evita pasar la lista de prefijos a todas las funciones.
-    """
+    """Crea y devuelve una función de validación que utiliza los prefijos aprendidos."""
     def validador(vin):
         vin_limpio = normalizar_vin(vin)
         if not tiene_formato_base_vin(vin_limpio):
             return False
-        if not prefijos_aprendidos: # Si no se aprendió ningún patrón, solo valida el formato base
+        if not prefijos_aprendidos:
             return True
         return vin_limpio[:3] in prefijos_aprendidos
     return validador
 
 def leer_excel_vins_base(excel_file):
-    """
-    Lee el Excel y realiza solo la validación de formato base (17 caracteres).
-    No juzga la validez del prefijo todavía.
-    """
+    """Lee el Excel y realiza solo la validación de formato base."""
     vins_con_formato_correcto = []
     vins_invalidos = []
     
@@ -55,7 +45,6 @@ def leer_excel_vins_base(excel_file):
     
     start_row = 0
     if len(df.columns) > 1:
-        # Se asume que si la primera celda no parece un VIN, es un encabezado.
         if not tiene_formato_base_vin(df.iloc[0, 1]):
             start_row = 1
         
@@ -90,6 +79,7 @@ st.set_page_config(page_title="Comparador de VINs Adaptativo", layout="centered"
 st.title("🔬 Comparador de VINs Adaptativo: Excel vs PDF")
 st.info("Esta herramienta aprende la estructura de los VINs de tu archivo Excel para realizar una búsqueda más precisa en los PDFs.")
 
+# Asignar 'keys' es crucial para poder controlarlos programáticamente
 excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"], key="excel_uploader")
 pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True, key="pdf_uploader")
 
@@ -97,7 +87,12 @@ col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Comparar", type="primary")
 with col2:
+    # NUEVO: Lógica mejorada para el botón de limpieza
     if st.button("🧹 Limpiar y Empezar de Nuevo"):
+        # Borra explícitamente el estado de los archivos subidos
+        st.session_state.excel_uploader = None
+        st.session_state.pdf_uploader = None
+        # Rerun para refrescar la interfaz y mostrar los widgets vacíos
         st.rerun()
 
 if procesar:
@@ -106,27 +101,20 @@ if procesar:
     else:
         with st.spinner("Procesando... Aprendiendo patrones y comparando archivos..."):
             try:
-                # --- Flujo de Procesamiento Adaptativo ---
-                
-                # 1. Lectura inicial y validación de formato base del Excel
+                # --- Flujo de Procesamiento Adaptativo (sin cambios) ---
                 vins_excel_formato_base, vins_invalidos_formato = leer_excel_vins_base(excel_file)
-                
-                # 2. Aprender los patrones (prefijos) de los VINs del Excel
                 prefijos_aprendidos = aprender_patrones_vin(vins_excel_formato_base)
+                
                 if not prefijos_aprendidos:
                     st.warning("No se pudo aprender ningún patrón de VINs del archivo Excel. La búsqueda en PDF puede ser menos precisa.")
                 
-                # 3. Crear un validador basado en los patrones aprendidos
                 es_vin_valido = crear_validador_dinamico(prefijos_aprendidos)
-
-                # 4. Clasificar finalmente los VINs del Excel
+                
                 vins_validos_finales = [vin for vin in vins_excel_formato_base if es_vin_valido(vin)]
-                # Los VINs con formato correcto pero prefijo incorrecto se mueven a "inválidos"
                 vins_con_prefijo_invalido = [vin for vin in vins_excel_formato_base if not es_vin_valido(vin)]
                 for vin in vins_con_prefijo_invalido:
                     vins_invalidos_formato.append({"vin": vin})
 
-                # --- Lógica de Comparación (similar a antes, pero usando el nuevo validador) ---
                 textos_pdf = {pdf.name: leer_pdf(pdf) for pdf in pdf_files}
                 texto_concatenado_pdf = " ".join(textos_pdf.values())
                 
@@ -139,7 +127,6 @@ if procesar:
 
                 vin_solo_en_excel = sorted(list(vin_unicos_excel - set(vin_encontrados_en_pdf.keys())))
 
-                # --- Búsqueda en PDF usando el validador dinámico ---
                 vin_regex = re.compile(r"[A-HJ-NPR-Z0-9]{17}")
                 posibles_vins_en_pdf_crudos = vin_regex.findall(re.sub(r'\s', '', texto_concatenado_pdf))
                 
@@ -148,7 +135,7 @@ if procesar:
                     if es_vin_valido(vin_posible) and vin_posible not in vin_unicos_excel:
                         vin_solo_en_pdf.add(vin_posible)
                 
-                # --- Presentación de Resultados ---
+                # --- Presentación de Resultados (sin cambios) ---
                 st.subheader("✅ Resumen de Resultados")
                 st.write(f"Patrones de VIN aprendidos del Excel: **{', '.join(sorted(prefijos_aprendidos)) if prefijos_aprendidos else 'Ninguno'}**")
                 st.write(f"Total de VINs válidos únicos en Excel: **{len(vin_unicos_excel)}**")
