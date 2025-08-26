@@ -6,43 +6,32 @@ import io
 from collections import Counter
 
 # --------------------------------------------------------------------------
-# Funciones de Procesamiento y Validación
+# Funciones de Procesamiento y Validación (sin cambios)
 # --------------------------------------------------------------------------
 
 def normalizar_vin(vin):
-    """Elimina espacios y convierte a mayúsculas."""
     return (str(vin).replace(" ", "").replace("\r", "").replace("\n", "").replace("\t", "")).upper() if vin else ""
 
 def tiene_formato_base_vin(vin):
-    """
-    Verifica la estructura base de un VIN: 17 caracteres sin I, O, Q.
-    CORREGIDO: Se ha eliminado el guion doble en el rango '0-9'.
-    """
     return bool(re.fullmatch(r"[A-HJ-NPR-Z0-9]{17}", normalizar_vin(vin)))
 
 def aprender_patrones_vin(lista_vins_validos):
-    """Aprende los prefijos (WMI) de una lista de VINs de referencia."""
     if not lista_vins_validos:
         return set()
     return {vin[:3] for vin in lista_vins_validos}
 
 def crear_validador_dinamico(prefijos_aprendidos):
-    """Crea y devuelve una función de validación que utiliza los prefijos aprendidos."""
     def validador(vin):
         vin_limpio = normalizar_vin(vin)
         if not tiene_formato_base_vin(vin_limpio):
             return False
-        # Si no se aprendieron patrones (ej. Excel vacío), se valida solo el formato base
         if not prefijos_aprendidos:
             return True
         return vin_limpio[:3] in prefijos_aprendidos
     return validador
 
 def leer_excel_vins_base(excel_file):
-    """Lee el Excel y realiza solo la validación de formato base."""
-    vins_con_formato_correcto = []
-    vins_invalidos = []
-    
+    vins_con_formato_correcto, vins_invalidos = [], []
     excel_file.seek(0)
     extension = excel_file.name.split('.')[-1].lower()
     df = pd.read_excel(excel_file, engine='xlrd' if extension == 'xls' else 'openpyxl', header=None, dtype=str, keep_default_na=False)
@@ -51,7 +40,6 @@ def leer_excel_vins_base(excel_file):
     if len(df.columns) > 1 and not df.empty:
         if not tiene_formato_base_vin(df.iloc[0, 1]):
             start_row = 1
-        
         vins_crudos = df.iloc[start_row:, 1].tolist()
         for vin_crudo in vins_crudos:
             vin_normalizado = normalizar_vin(vin_crudo)
@@ -83,6 +71,21 @@ st.set_page_config(page_title="Comparador de VINs Adaptativo", layout="centered"
 st.title("🔬 Comparador de VINs Adaptativo: Excel vs PDF")
 st.info("Esta herramienta aprende la estructura de los VINs de tu archivo Excel para realizar una búsqueda más precisa en los PDFs.")
 
+# ##########################################################################
+# ## INICIO DE LA CORRECCIÓN CON CALLBACK                                 ##
+# ##########################################################################
+
+# 1. Se define la función callback que limpiará el estado de la sesión.
+def limpiar_archivos():
+    """Elimina las claves de los archivos subidos del estado de la sesión."""
+    for key in ["excel_uploader", "pdf_uploader"]:
+        if key in st.session_state:
+            del st.session_state[key]
+
+# ##########################################################################
+# ## FIN DE LA CORRECCIÓN                                                 ##
+# ##########################################################################
+
 excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"], key="excel_uploader")
 pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True, key="pdf_uploader")
 
@@ -90,12 +93,9 @@ col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Comparar", type="primary")
 with col2:
-    if st.button("🧹 Limpiar y Empezar de Nuevo"):
-        keys_a_limpiar = ["excel_uploader", "pdf_uploader"]
-        for key in keys_a_limpiar:
-            if key in st.session_state:
-                del st.session_state[key]
-        st.rerun()
+    # 2. El botón ahora llama a la función callback con el parámetro on_click.
+    #    Streamlit se encarga de re-ejecutar el script después del callback.
+    st.button("🧹 Limpiar y Empezar de Nuevo", on_click=limpiar_archivos)
 
 if procesar:
     if not excel_file or not pdf_files:
@@ -103,12 +103,12 @@ if procesar:
     else:
         with st.spinner("Procesando... Aprendiendo patrones y comparando archivos..."):
             try:
-                # --- Flujo de Procesamiento ---
+                # El resto del código de procesamiento permanece sin cambios.
                 vins_excel_formato_base, vins_invalidos_formato = leer_excel_vins_base(excel_file)
                 prefijos_aprendidos = aprender_patrones_vin(vins_excel_formato_base)
                 
                 if not prefijos_aprendidos and vins_excel_formato_base:
-                    st.warning("No se pudo aprender ningún patrón de VINs del archivo Excel. La búsqueda en PDF puede ser menos precisa.")
+                    st.warning("No se pudo aprender ningún patrón de VINs del archivo Excel.")
                 
                 es_vin_valido = crear_validador_dinamico(prefijos_aprendidos)
                 
@@ -137,7 +137,6 @@ if procesar:
                     if es_vin_valido(vin_posible) and vin_posible not in vin_unicos_excel:
                         vin_solo_en_pdf.add(vin_posible)
                 
-                # --- Presentación de Resultados ---
                 st.subheader("✅ Resumen de Resultados")
                 if prefijos_aprendidos:
                     st.write(f"Patrones de VIN aprendidos del Excel: **{', '.join(sorted(prefijos_aprendidos))}**")
