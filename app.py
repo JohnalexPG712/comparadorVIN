@@ -8,7 +8,6 @@ from collections import Counter
 # --------------------------------------------------------------------------
 # Funciones de backend (sin cambios)
 # --------------------------------------------------------------------------
-
 def normalizar_vin(vin):
     return (str(vin).replace(" ", "").replace("\r", "").replace("\n", "").replace("\t", "")).upper() if vin else ""
 
@@ -38,7 +37,6 @@ def leer_excel_vins_base(excel_file):
     
     start_row = 0
     if len(df.columns) > 1 and not df.empty:
-        # Usar .get(1) para evitar error si no hay columna 1
         if not tiene_formato_base_vin(df.iloc[0].get(1)):
             start_row = 1
         vins_crudos = df.iloc[start_row:, 1].tolist()
@@ -67,40 +65,38 @@ def buscar_vin_flexible(vin, texto_pdf):
 # --------------------------------------------------------------------------
 # Interfaz de la aplicación Streamlit
 # --------------------------------------------------------------------------
-
 st.set_page_config(page_title="Comparador de VINs Adaptativo", layout="centered")
 st.title("🔬 Comparador de VINs Adaptativo: Excel vs PDF")
 st.info("Esta herramienta aprende la estructura de los VINs de tu archivo Excel para realizar una búsqueda más precisa en los PDFs.")
 
 # ##########################################################################
-# ## INICIO DE LA CORRECCIÓN FINAL (Asignando None)                       ##
+# ## INICIO DE LA CORRECCIÓN FINAL CON REINICIO DE CONTENEDOR             ##
 # ##########################################################################
 
-# 1. Se define la función callback.
-def limpiar_archivos():
-    """Asigna None a las claves de los archivos subidos en el estado de la sesión."""
-    st.session_state["excel_uploader"] = None
-    st.session_state["pdf_uploader"] = None
-    # Importante: para archivos múltiples, también hay que asignar una lista vacía
-    # Esto a veces soluciona el problema.
-    st.session_state["pdf_uploader"] = []
+# 1. Inicializar un contador en el estado de la sesión si no existe.
+if 'limpiar_contador' not in st.session_state:
+    st.session_state.limpiar_contador = 0
 
+# 2. Crear un contenedor con una clave dinámica basada en el contador.
+#    Cualquier cambio en la clave forzará a Streamlit a redibujar el contenedor y sus hijos.
+file_upload_container = st.container(key=f"uploader_{st.session_state.limpiar_contador}")
+with file_upload_container:
+    excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"])
+    pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True)
 
 # ##########################################################################
 # ## FIN DE LA CORRECCIÓN                                                 ##
 # ##########################################################################
 
-# Widgets de carga de archivos. El 'key' es fundamental.
-excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"], key="excel_uploader")
-pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True, key="pdf_uploader")
-
-
 col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Comparar", type="primary")
 with col2:
-    # 2. El botón sigue llamando al callback a través de on_click.
-    st.button("🧹 Limpiar y Empezar de Nuevo", on_click=limpiar_archivos)
+    # 3. El botón de limpieza ahora solo incrementa el contador.
+    #    Esto cambiará la clave del contenedor y lo reiniciará.
+    if st.button("🧹 Limpiar y Empezar de Nuevo"):
+        st.session_state.limpiar_contador += 1
+        st.rerun() # Forzar una recarga inmediata de la página
 
 if procesar:
     if not excel_file or not pdf_files:
