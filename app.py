@@ -6,16 +6,27 @@ import io
 from collections import Counter
 
 # --------------------------------------------------------------------------
-# INICIALIZACIÓN DEL ESTADO DE LA SESIÓN (¡NUEVO Y CRUCIAL!)
+# INICIALIZACIÓN Y LÓGICA DE REINICIO (¡NUEVA ESTRUCTURA!)
 # --------------------------------------------------------------------------
-# Este bloque se ejecuta al principio de cada recarga de página.
-# Se asegura de que las claves para los widgets siempre existan en el estado de la sesión
-# antes de que los widgets sean dibujados.
 
+# 1. Se define la función callback que solo "marcará" que se debe reiniciar.
+def trigger_reset():
+    st.session_state.reset_triggered = True
+
+# 2. Se inicializa el estado la primera vez que se carga la app.
+if "reset_triggered" not in st.session_state:
+    st.session_state.reset_triggered = False
 if "excel_uploader" not in st.session_state:
     st.session_state.excel_uploader = None
 if "pdf_uploader" not in st.session_state:
     st.session_state.pdf_uploader = []
+
+# 3. Lógica principal de reinicio: se ejecuta al principio de cada recarga.
+#    Si la bandera de reinicio está activada, limpia el estado y la desactiva.
+if st.session_state.reset_triggered:
+    st.session_state.excel_uploader = None
+    st.session_state.pdf_uploader = []
+    st.session_state.reset_triggered = False
 
 # --------------------------------------------------------------------------
 # Funciones de backend (sin cambios)
@@ -83,13 +94,7 @@ st.set_page_config(page_title="Comparador de VINs Adaptativo", layout="centered"
 st.title("🔬 Comparador de VINs Adaptativo: Excel vs PDF")
 st.info("Esta herramienta aprende la estructura de los VINs de tu archivo Excel para realizar una búsqueda más precisa en los PDFs.")
 
-# Función callback para el botón de limpieza
-def limpiar_sesion():
-    st.session_state.excel_uploader = None
-    st.session_state.pdf_uploader = []
-
-# Widgets de carga de archivos
-# Ahora usan el estado de la sesión que hemos inicializado previamente.
+# Widgets de carga de archivos.
 excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"], key="excel_uploader")
 pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True, key="pdf_uploader")
 
@@ -98,7 +103,8 @@ col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Comparar", type="primary")
 with col2:
-    st.button("🧹 Limpiar y Empezar de Nuevo", on_click=limpiar_sesion)
+    # El botón ahora llama al callback que solo activa la bandera.
+    st.button("🧹 Limpiar y Empezar de Nuevo", on_click=trigger_reset)
 
 # Lógica de procesamiento
 if procesar:
@@ -107,6 +113,7 @@ if procesar:
     else:
         with st.spinner("Procesando... Aprendiendo patrones y comparando archivos..."):
             try:
+                # ... (El resto del código de procesamiento no cambia)
                 vins_excel_formato_base, vins_invalidos_formato = leer_excel_vins_base(excel_file)
                 prefijos_aprendidos = aprender_patrones_vin(vins_excel_formato_base)
                 
@@ -146,7 +153,6 @@ if procesar:
                 st.write(f"Total de VINs encontrados solo en PDF (con patrón válido): **{len(vin_solo_en_pdf)}**")
 
                 resultados = []
-                # ... (resto del código de resultados sin cambios)
                 for vin in sorted(vin_unicos_excel):
                     encontrado_en = vin_encontrados_en_pdf.get(vin)
                     resultados.append({"VIN": vin, "Estado": "✅ Encontrado en PDF" if encontrado_en else "❌ No Encontrado", "Archivos PDF": ", ".join(encontrado_en) if encontrado_en else "N/A", "Repetido en Excel": "Sí" if vin in vin_repetidos_excel else "No"})
