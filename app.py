@@ -83,7 +83,7 @@ def buscar_vin_flexible(vin, texto_pdf):
 
 st.set_page_config(page_title="Comparador de VINs Adaptativo", layout="centered")
 st.title("🔬Comparador de VINs: Excel (FMM) vs Documentos PDF")
-st.info("Permite comparar y verificar los VIN entre el Formato de Movimiento de Mercancías (FMM) y los documentos soporte de las transacciones 329, 401, 422 y 436 (DI, DUTA, Factura o Remisión). Comparador de VINs Adaptativo.")
+st.info("Permite comparar y verificar los VIN entre el Formulario de Movimiento de Mercancías (FMM) y los documentos soporte de las transacciones 329, 401, 422 y 436 (DI, DUTA, Factura o Remisión). Comparador de VINs Adaptativo.")
 
 # 3. Se usan claves dinámicas para los widgets de carga de archivos.
 #    Cuando el contador cambie, estas claves cambiarán, forzando un reinicio completo de los widgets.
