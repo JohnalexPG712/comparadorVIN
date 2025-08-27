@@ -162,3 +162,25 @@ if procesar:
 
             except Exception as e:
                 st.error(f"Ocurrió un error durante el procesamiento: {e}")
+
+
+                # --- Cambiar color del botón "Limpiar Resultados" a verde ---
+st.markdown("""
+    <style>
+    /* Selecciona específicamente el botón de "Limpiar Resultados" */
+    div.stButton > button[title="🧹 Limpiar Resultados"] {
+        background-color: #28a745;  /* Verde */
+        color: white;
+        border-radius: 8px;
+        height: 3em;
+        width: 100%;
+        font-weight: bold;
+        border: none;
+    }
+    div.stButton > button[title="🧹 Limpiar Resultados"]:hover {
+        background-color: #218838; /* Verde más oscuro */
+        color: white;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
