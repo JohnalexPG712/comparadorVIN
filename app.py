@@ -93,6 +93,27 @@ pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"]
 col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Verificar", type="primary")
+    
+    # --- Cambiar el color del botón "Procesar y Verificar" a verde ---
+st.markdown("""
+    <style>
+    /* Botón Procesar y Verificar */
+    div.stButton > button:first-child {
+        background-color: #28a745;  /* Verde */
+        color: white;
+        border-radius: 8px;
+        height: 3em;
+        width: 100%;
+        font-weight: bold;
+        border: none;
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #218838;  /* Verde más oscuro */
+        color: white;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 
 with col2:
     # 4. El botón de limpieza ahora llama a la función que incrementa el contador.
@@ -162,25 +183,4 @@ if procesar:
 
             except Exception as e:
                 st.error(f"Ocurrió un error durante el procesamiento: {e}")
-
-
-                # --- Cambiar color del botón "Limpiar Resultados" a verde ---
-st.markdown("""
-    <style>
-    /* Selecciona específicamente el botón de "Limpiar Resultados" */
-    div.stButton > button[title="🧹 Limpiar Resultados"] {
-        background-color: #28a745;  /* Verde */
-        color: white;
-        border-radius: 8px;
-        height: 3em;
-        width: 100%;
-        font-weight: bold;
-        border: none;
-    }
-    div.stButton > button[title="🧹 Limpiar Resultados"]:hover {
-        background-color: #218838; /* Verde más oscuro */
-        color: white;
-    }
-    </style>
-""", unsafe_allow_html=True)
 
