@@ -85,13 +85,13 @@ custom_css = """
 <style>
     /* Apunta al primer botón dentro de la disposición de columnas */
     div[data-testid="stHorizontalBlock"] > div:nth-child(1) .stButton > button {
-        background-color: #007bff; /* Color Azul */
+        background-color: #00a33d; /* Color Azul */
         color: white;
         border: none;
         border-radius: 5px;
     }
     div[data-testid="stHorizontalBlock"] > div:nth-child(1) .stButton > button:hover {
-        background-color: ##0a38cf; /* Azul un poco más oscuro al pasar el ratón */
+        background-color: #109341; /* Azul un poco más oscuro al pasar el ratón */
     }
 </style>
 """
