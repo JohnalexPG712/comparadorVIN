@@ -91,7 +91,7 @@ custom_css = """
         border-radius: 5px;
     }
     div[data-testid="stHorizontalBlock"] > div:nth-child(1) .stButton > button:hover {
-        background-color: #005491; /* Azul un poco más oscuro al pasar el ratón */
+        background-color: #0e4c7a; /* Azul un poco más oscuro al pasar el ratón */
     }
 </style>
 """
