@@ -98,7 +98,7 @@ custom_css = """
 st.markdown(custom_css, unsafe_allow_html=True)
 
 
-st.title("Comparador de VINs: Excel (FMM) vs Documentos PDF")
+st.title("🔬 Comparador de VINs: Excel (FMM) vs Documentos PDF")
 st.info(
     "Permite comparar y verificar los VIN entre el Formulario de Movimiento de Mercancías (FMM) y los "
     "documentos soporte de las transacciones 329, 401, 422 y 436 (DI, DUTA, Factura o Remisión). "
