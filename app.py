@@ -85,7 +85,7 @@ custom_css = """
 <style>
     /* Apunta al primer botón dentro de la disposición de columnas */
     div[data-testid="stHorizontalBlock"] > div:nth-child(1) .stButton > button {
-        background-color: #0057a3; /* Color Azul */
+        background-color: #0061a9; /* Color Azul */
         color: white;
         border: none;
         border-radius: 5px;
