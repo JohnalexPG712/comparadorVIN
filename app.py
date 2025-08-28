@@ -9,14 +9,10 @@ from collections import Counter
 # PATRÓN DE DISEÑO DEFINITIVO: REINICIO POR CAMBIO DE CLAVE (KEY)
 # --------------------------------------------------------------------------
 
-# 1. Se inicializa un contador en el estado de la sesión.
-#    Este contador se usará para generar claves únicas para los widgets.
 if 'upload_counter' not in st.session_state:
     st.session_state.upload_counter = 0
 
-# 2. Se define la función callback que incrementará el contador.
 def reiniciar_widgets():
-    """Incrementa el contador para forzar la recreación de los widgets."""
     st.session_state.upload_counter += 1
 
 # --------------------------------------------------------------------------
@@ -81,22 +77,43 @@ def buscar_vin_flexible(vin, texto_pdf):
 # Interfaz de la aplicación Streamlit
 # --------------------------------------------------------------------------
 
-st.set_page_config(page_title="Comparador de VINs Adaptativo", layout="centered")
-st.title("🔬Comparador de VINs: Excel (FMM) vs Documentos PDF")
-st.info("Permite comparar y verificar los VIN entre el Formulario de Movimiento de Mercancías (FMM) y los documentos soporte de las transacciones 329, 401, 422 y 436 (DI, DUTA, Factura o Remisión). Comparador de VINs Adaptativo.")
+st.set_page_config(page_title="Comparador de VINs", layout="centered")
 
-# 3. Se usan claves dinámicas para los widgets de carga de archivos.
-#    Cuando el contador cambie, estas claves cambiarán, forzando un reinicio completo de los widgets.
-excel_file = st.file_uploader("1. Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"], key=f"excel_uploader_{st.session_state.upload_counter}")
-pdf_files = st.file_uploader("2. Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True, key=f"pdf_uploader_{st.session_state.upload_counter}")
+# MODIFICADO: Se añade un bloque de CSS para personalizar el color del botón
+# Para cambiar a AZUL, reemplaza el color de fondo por: #007bff
+custom_css = """
+<style>
+    /* Apunta al primer botón dentro de la disposición de columnas */
+    div[data-testid="stHorizontalBlock"] > div:nth-child(1) .stButton > button {
+        background-color: #28a745; /* Color Verde */
+        color: white;
+        border: none;
+        border-radius: 5px;
+    }
+    div[data-testid="stHorizontalBlock"] > div:nth-child(1) .stButton > button:hover {
+        background-color: #218838; /* Verde un poco más oscuro al pasar el ratón */
+    }
+</style>
+"""
+st.markdown(custom_css, unsafe_allow_html=True)
+
+
+st.title("Comparador de VINs: Excel (FMM) vs Documentos PDF")
+st.info(
+    "Permite comparar y verificar los VIN entre el Formulario de Movimiento de Mercancías (FMM) y los "
+    "documentos soporte de las transacciones 329, 401, 422 y 436 (DI, DUTA, Factura o Remisión). "
+    "Esta herramienta es adaptativa."
+)
+
+excel_file = st.file_uploader("Sube el archivo Excel (FMM) de referencia", type=["xlsx", "xls"], key=f"excel_uploader_{st.session_state.upload_counter}")
+pdf_files = st.file_uploader("Sube los archivos PDF de soporte", type=["pdf"], accept_multiple_files=True, key=f"pdf_uploader_{st.session_state.upload_counter}")
 
 col1, col2 = st.columns([1.5, 2])
 with col1:
-    procesar = st.button("3. Procesar y Verificar", type="primary")
-    
+    procesar = st.button("Procesar y Verificar")
+
 with col2:
-    # 4. El botón de limpieza ahora llama a la función que incrementa el contador.
-    st.button("🧹 Limpiar Resultados", on_click=reiniciar_widgets)
+    st.button("Limpiar Resultados", on_click=reiniciar_widgets)
 
 if procesar:
     if not excel_file or not pdf_files:
@@ -104,7 +121,7 @@ if procesar:
     else:
         with st.spinner("Procesando..."):
             try:
-                # ... (El resto del código de procesamiento no cambia)
+                # El resto del código de procesamiento no cambia.
                 vins_excel_formato_base, vins_invalidos_formato = leer_excel_vins_base(excel_file)
                 prefijos_aprendidos = aprender_patrones_vin(vins_excel_formato_base)
                 
@@ -135,10 +152,10 @@ if procesar:
                 if prefijos_aprendidos:
                     st.write(f"Patrones de VIN aprendidos del Excel: **{', '.join(sorted(prefijos_aprendidos))}**")
                 
-                st.write(f"Total de VINs válidos únicos en Excel (FMM): **{len(vin_unicos_excel)}**")
-                st.write(f"Total de coincidencias (FMM -> PDF): **{len(vin_encontrados_en_pdf)}**")
-                st.write(f"Total de VINs solo en Excel (FMM): **{len(vin_solo_en_excel)}**")
-                st.write(f"Total de VINs encontrados solo en PDF: **{len(vin_solo_en_pdf)}**")
+                st.write(f"Total de VINs válidos únicos en Excel: **{len(vin_unicos_excel)}**")
+                st.write(f"Total de coincidencias (Excel -> PDF): **{len(vin_encontrados_en_pdf)}**")
+                st.write(f"Total de VINs solo en Excel: **{len(vin_solo_en_excel)}**")
+                st.write(f"Total de VINs encontrados solo en PDF (con patrón válido): **{len(vin_solo_en_pdf)}**")
 
                 resultados = []
                 for vin in sorted(vin_unicos_excel):
@@ -162,4 +179,3 @@ if procesar:
 
             except Exception as e:
                 st.error(f"Ocurrió un error durante el procesamiento: {e}")
-
