@@ -99,7 +99,7 @@ st.markdown("""
     <style>
     /* Botón Procesar y Verificar */
     div.stButton > button:first-child {
-        background-color: #28a745;  /* Verde */
+        background-color: #1470A8;  /* Azul */
         color: white;
         border-radius: 8px;
         height: 3em;
@@ -108,7 +108,7 @@ st.markdown("""
         border: none;
     }
     div.stButton > button:first-child:hover {
-        background-color: #218838;  /* Verde más oscuro */
+        background-color: #FCFAFA;  /* color blanco */
         color: white;
     }
     </style>
