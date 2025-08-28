@@ -94,27 +94,6 @@ col1, col2 = st.columns([1.5, 2])
 with col1:
     procesar = st.button("3. Procesar y Verificar", type="primary")
     
-    # --- Cambiar el color del botón "Procesar y Verificar" a verde ---
-st.markdown("""
-    <style>
-    /* Botón Procesar y Verificar */
-    div.stButton > button:first-child {
-        background-color: #1470A8;  /* Azul */
-        color: white;
-        border-radius: 8px;
-        height: 3em;
-        width: 100%;
-        font-weight: bold;
-        border: none;
-    }
-    div.stButton > button:first-child:hover {
-        background-color: #FCFAFA;  /* color blanco */
-        color: white;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-
 with col2:
     # 4. El botón de limpieza ahora llama a la función que incrementa el contador.
     st.button("🧹 Limpiar Resultados", on_click=reiniciar_widgets)
