@@ -77,7 +77,7 @@ def buscar_vin_flexible(vin, texto_pdf):
 # Interfaz de la aplicación Streamlit
 # --------------------------------------------------------------------------
 
-st.set_page_config(page_title="Sistema de Verificación de VINs", page_icon="🚀🔬", layout="wide")
+st.set_page_config(page_title="Comparador de VINs - FMM vs PDF",page_icon="🔍",layout="centered")
 
 # MODIFICADO: Se añade un bloque de CSS para personalizar el color del botón
 # Para cambiar a AZUL, reemplaza el color de fondo por: #007bff
