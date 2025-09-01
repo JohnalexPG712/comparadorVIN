@@ -5,6 +5,9 @@ import re
 import io
 from collections import Counter
 
+# --- CONFIGURACIÓN INICIAL ---
+st.set_page_config(page_title="Sistema de Verificación de VINs", page_icon="🚀🔬", layout="wide")
+
 # --------------------------------------------------------------------------
 # PATRÓN DE DISEÑO DEFINITIVO: REINICIO POR CAMBIO DE CLAVE (KEY)
 # --------------------------------------------------------------------------
